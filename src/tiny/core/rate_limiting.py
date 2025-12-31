@@ -30,6 +30,7 @@ class RateLimiter:
             key_func=self.get_rate_limit_key,
             storage_uri=self.redis_storage_uri,
             enabled=True,
+            key_prefix=config.redis.cache_prefix
         )
 
     @staticmethod

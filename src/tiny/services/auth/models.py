@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 
 import bcrypt
 from jose import jwt
@@ -39,6 +40,13 @@ class User(Base):
         return jwt.encode(
             data, config.auth.jwt_secret.get_secret_value(), algorithm="HS256"
         )
+
+
+class UserCache(BaseModel):
+    id: int
+    is_active: bool
+    email: str
+    created_at: Optional[str] = None
 
 
 class AuthBase(BaseModel):

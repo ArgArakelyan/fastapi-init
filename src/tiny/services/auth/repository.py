@@ -6,18 +6,25 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tiny.core.dependencies import get_session, get_redis
-from tiny.services.auth.models import User
-import json
+from tiny.services.auth.models import User, UserCache
+from tiny.utils.cache import serialize, deserialize
+from tiny.core.config import config
 
 logger = logging.getLogger(__name__)
 
 
 class UserRepository:
+    """User repositry"""
+
+    CACHE_TTL = 300 # 5 minutes
+    CACHE_PREFIX = f"{config.redis.cache_prefix}:user"
+
     def __init__(self, session: AsyncSession, redis) -> None:
         self.session = session
         self.redis = redis
-        self.cache_prefix = "user"
-        self.cache_ttl = 300
+
+    def _cache_key_exists(self, user_id: int) -> str:
+        return f"{self.CACHE_PREFIX}:exists:{user_id}"
 
     async def create(self, email, password):
         try:
@@ -28,6 +35,7 @@ class UserRepository:
             await self.session.commit()
             return user
         except IntegrityError as e:
+            await self.session.rollback()
             logger.error(
                 "Error creating user",
                 extra={"user": {"email": email}},
@@ -35,41 +43,43 @@ class UserRepository:
             )
             raise
 
-    async def get_by_email(self, email: str) -> User:
-        user = await self.session.execute(select(User).where(User.email == email))
-        return user.scalar_one_or_none()
+
+    async def get_by_email(self, email: str) -> User | None:
+        result = await self.session.execute(
+            select(User)
+            .where(User.email == email)
+        )
+        return result.scalar_one_or_none()
 
     async def get_exists_by_id(self, user_id: int) -> int | None:
-        cache_key = f"{self.cache_prefix}:exists:{user_id}"
+        cache_key = self._cache_key_exists(user_id)
 
         cached = await self.redis.get(cache_key)
-
-        if cached is not None:
-            exists_in_cache = json.loads(cached)
-            logger.debug("User existence from cache", extra={"user_id": user_id})
-            return user_id if exists_in_cache else None
+        if (exists_cached := deserialize(cached)) is not None:
+            logger.debug(f"User existence cache hit: {user_id} -> {exists_cached}")
+            return user_id if exists_cached else None
 
         user_exists = await self.session.scalar(
             select(exists().where(User.id == user_id))
         )
 
-        cache_value = json.dumps(bool(user_exists))
-        await self.redis.setex(cache_key, self.cache_ttl, cache_value)
-
-        logger.debug("User existence CACHE MISS + stored", extra={"user_id": user_id, "exists": user_exists})
+        await self.redis.setex(cache_key, self.CACHE_TTL, serialize(user_exists))
+        logger.debug(f"User existence cache miss and stored: {user_id} -> {user_exists}")
 
         return user_id if user_exists else None
+
 
     async def get_by_id(self, user_id: int):
         user = await self.session.execute(select(User).where(User.id == user_id))
         return user.scalar_one_or_none()
 
+
     async def delete_by_id(self, user_id: int) -> bool:
         try:
             await self.session.execute(delete(User).where(User.id == user_id))
             await self.session.commit()
-            cache_key = f"{self.cache_prefix}:exists:{user_id}"
-            await self.redis.delete(cache_key)
+            await self.redis.delete(self._cache_key_exists(user_id))
+            logger.info("User deleted successfully", extra={"user": {"id": user_id}})
             return True
         except IntegrityError as e:
             logger.error(
