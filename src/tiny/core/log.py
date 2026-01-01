@@ -11,6 +11,21 @@ import structlog
 
 from tiny.core.config import config
 
+from contextvars import ContextVar
+
+request_id_var: ContextVar[str] = ContextVar('request_id', default='no-request')
+
+def add_request_id(_, __, event_dict):
+    event_dict["request_id"] = request_id_var.get()
+    return event_dict
+
+class RequestIDFilter(logging.Filter):
+    def filter(self, record):
+        # Для uvicorn.access парсим request_id из сообщения или contextvar
+        if "request_id" not in record.__dict__:
+            record.request_id = request_id_var.get('no-request')
+        return True
+
 
 def sanitize_tokens(
     logger: Any, method: str, event_dict: dict[str, Any]
@@ -123,3 +138,7 @@ def setup_logging():
         uvicorn_logger = logging.getLogger(logger_name)
         uvicorn_logger.handlers.clear()
         uvicorn_logger.propagate = True
+
+    uvicorn_access_logger = logging.getLogger("uvicorn.access")
+    uvicorn_access_logger.addFilter(RequestIDFilter())
+    uvicorn_access_logger.propagate = False
