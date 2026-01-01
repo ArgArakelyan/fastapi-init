@@ -2,10 +2,9 @@ import logging
 from typing import Any, Optional
 
 import redis.asyncio as redis
-from redis.exceptions import RedisError
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
-
+from redis.exceptions import RedisError
 
 from tiny.core.config import config
 

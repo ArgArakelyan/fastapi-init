@@ -1,5 +1,6 @@
 from fastapi import (APIRouter, Depends, HTTPException, Request, Response,
                      status)
+
 from tiny.core.rate_limiting import auth_rate_limit
 from tiny.services.auth.models import AuthLogin, AuthRegister
 from tiny.services.auth.service import (AuthService, CurrentUser,

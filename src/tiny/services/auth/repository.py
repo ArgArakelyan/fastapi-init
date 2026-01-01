@@ -5,10 +5,10 @@ from sqlalchemy import delete, exists, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from tiny.core.dependencies import get_session, get_redis
-from tiny.services.auth.models import User, UserCache
-from tiny.utils.cache import serialize, deserialize
 from tiny.core.config import config
+from tiny.core.dependencies import get_redis, get_session
+from tiny.services.auth.models import User, UserCache
+from tiny.utils.cache import deserialize, serialize
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class UserRepository:
     """User repositry"""
 
-    CACHE_TTL = 300 # 5 minutes
+    CACHE_TTL = 300  # 5 minutes
     CACHE_PREFIX = f"{config.redis.cache_prefix}:user"
 
     def __init__(self, session: AsyncSession, redis) -> None:
@@ -43,12 +43,8 @@ class UserRepository:
             )
             raise
 
-
     async def get_by_email(self, email: str) -> User | None:
-        result = await self.session.execute(
-            select(User)
-            .where(User.email == email)
-        )
+        result = await self.session.execute(select(User).where(User.email == email))
         return result.scalar_one_or_none()
 
     async def get_exists_by_id(self, user_id: int) -> int | None:
@@ -64,15 +60,15 @@ class UserRepository:
         )
 
         await self.redis.setex(cache_key, self.CACHE_TTL, serialize(user_exists))
-        logger.debug(f"User existence cache miss and stored: {user_id} -> {user_exists}")
+        logger.debug(
+            f"User existence cache miss and stored: {user_id} -> {user_exists}"
+        )
 
         return user_id if user_exists else None
-
 
     async def get_by_id(self, user_id: int):
         user = await self.session.execute(select(User).where(User.id == user_id))
         return user.scalar_one_or_none()
-
 
     async def delete_by_id(self, user_id: int) -> bool:
         try:
@@ -88,5 +84,7 @@ class UserRepository:
             return False
 
 
-def get_user_repository(session: AsyncSession = Depends(get_session), redis = Depends(get_redis)) -> UserRepository:
+def get_user_repository(
+    session: AsyncSession = Depends(get_session), redis=Depends(get_redis)
+) -> UserRepository:
     return UserRepository(session, redis)

@@ -4,6 +4,7 @@ Logging configuration (json)
 
 import logging
 import sys
+from contextvars import ContextVar
 from pathlib import Path
 from typing import Any
 
@@ -11,19 +12,19 @@ import structlog
 
 from tiny.core.config import config
 
-from contextvars import ContextVar
+request_id_var: ContextVar[str] = ContextVar("request_id", default="no-request")
 
-request_id_var: ContextVar[str] = ContextVar('request_id', default='no-request')
 
 def add_request_id(_, __, event_dict):
     event_dict["request_id"] = request_id_var.get()
     return event_dict
 
+
 class RequestIDFilter(logging.Filter):
     def filter(self, record):
         # Для uvicorn.access парсим request_id из сообщения или contextvar
         if "request_id" not in record.__dict__:
-            record.request_id = request_id_var.get('no-request')
+            record.request_id = request_id_var.get("no-request")
         return True
 
 

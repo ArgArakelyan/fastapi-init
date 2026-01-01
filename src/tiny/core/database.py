@@ -3,17 +3,19 @@
 """
 
 import logging
+import time
 from asyncio import wait_for
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Optional
 
-from sqlalchemy import text
+from sqlalchemy import event, text
 from sqlalchemy.engine.url import make_url
 from sqlalchemy.ext.asyncio import (AsyncEngine, AsyncSession,
                                     async_sessionmaker, create_async_engine)
 from sqlalchemy.orm import DeclarativeBase
 
 from tiny.core.config import config
+from tiny.core.metrics import Counter, Gauge, Histogram, registry
 
 logger = logging.getLogger(__name__)
 
@@ -162,3 +164,60 @@ db = DbManager(
 
 class Base(DeclarativeBase):
     pass
+
+
+@event.listens_for(db.engine.sync_engine, "connect")
+def receive_connect(dbapi_connection, connection_record):  # noqa
+    DB_CONNECTIONS_ACTIVE.inc()
+
+
+@event.listens_for(db.engine.sync_engine, "close")
+def receive_close(dbapi_connection, connection_record):  # noqa
+    DB_CONNECTIONS_ACTIVE.dec()
+
+
+@event.listens_for(db.engine.sync_engine, "checkout")
+def receive_checkout(dbapi_connection, connection_record, connection_proxy):  # noqa
+    pass
+
+
+@event.listens_for(db.engine.sync_engine, "before_cursor_execute")
+def before_cursor_execute(
+    conn, cursor, statement, parameters, context, executemany
+):  # noqa
+    context._query_start_time = time.time()
+
+
+@event.listens_for(db.engine.sync_engine, "after_cursor_execute")
+def after_cursor_execute(
+    conn, cursor, statement, parameters, context, executemany
+):  # noqa
+    duration = time.time() - context._query_start_time  # noqa
+    DB_QUERY_DURATION.observe(duration)
+
+    # Определяем тип операции для тега
+    operation = statement.split()[0].lower()
+    DB_QUERIES_TOTAL.labels(operation=operation).inc()
+
+
+DB_QUERIES_TOTAL = Counter(
+    "db_queries_total", "Total number of DB queries", ["operation"], registry=registry
+)
+DB_QUERY_DURATION = Histogram(
+    "db_query_duration_seconds", "DB query duration in seconds", registry=registry
+)
+DB_CONNECTIONS_ACTIVE = Gauge(
+    "db_connections_active", "Number of active DB connections", registry=registry
+)
+DB_CONNECTION_ERRORS = Counter(
+    "db_connection_errors_total", "Number of DB connection errors", registry=registry
+)
+DB_TRANSACTIONS_TOTAL = Counter(
+    "db_transactions_total",
+    "Total number of DB transactions",
+    ["type"],
+    registry=registry,
+)
+DB_ERRORS_TOTAL = Counter(
+    "db_errors_total", "Total number of DB errors", ["error_type"], registry=registry
+)

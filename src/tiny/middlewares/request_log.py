@@ -5,7 +5,7 @@ import structlog
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
-request_id_var: ContextVar[str] = ContextVar('request_id', default='no-request')
+request_id_var: ContextVar[str] = ContextVar("request_id", default="no-request")
 
 
 class RequestIDMiddleware(BaseHTTPMiddleware):
@@ -18,7 +18,7 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
         structlog.contextvars.bind_contextvars(
             client_ip=request.client.host if request.client else None,
             method=request.method,
-            path=str(request.url.path)
+            path=str(request.url.path),
         )
 
         response = await call_next(request)

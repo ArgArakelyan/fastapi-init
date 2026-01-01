@@ -1,6 +1,7 @@
 """Custom key builders for fastapi_cache2"""
+
 import json
-from typing import Optional, Any
+from typing import Any, Optional
 
 
 def user_key_builder(
@@ -20,7 +21,6 @@ def user_key_builder(
         user_id = request.path_params.get("user_id")
 
     return f"{namespace}:{user_id}"
-
 
 
 def serialize(value: Any) -> str:
