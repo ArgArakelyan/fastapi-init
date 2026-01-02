@@ -20,7 +20,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                 response = await call_next(request)
                 return response
 
-            # request size validaiton
+            # request size validation
             content_length = request.headers.get("content-length")
             if content_length:
                 try:
@@ -80,7 +80,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             self.add_security_headers(response, request)
             return response
         except Exception as e:
-            logger.error("Security middlware error", exc_info=e)
+            logger.error("Security middleware error", exc_info=e)
 
             return JSONResponse(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

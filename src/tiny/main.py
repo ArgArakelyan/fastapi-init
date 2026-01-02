@@ -1,13 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.gzip import GZipMiddleware
-from prometheus_client import start_http_server
 from slowapi.errors import RateLimitExceeded
 
 from tiny.api import api_router
-from tiny.core.config import config, fastapi_settings
+from tiny.core.config import fastapi_settings
 from tiny.core.lifespan import lifespan
 from tiny.core.log import setup_logging
-from tiny.core.metrics import registry, setup_metrics
+from tiny.core.metrics import setup_metrics
 from tiny.core.rate_limiting import rate_limit_exceeded_handler, rate_limiter
 from tiny.middlewares.request_log import RequestIDMiddleware
 from tiny.middlewares.security import SecurityMiddleware
@@ -26,5 +25,3 @@ app.state.limiter = rate_limiter._limiter  # noqa
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
 setup_metrics(app)
-
-start_http_server(config.prometheus.metrics_port, registry=registry)
