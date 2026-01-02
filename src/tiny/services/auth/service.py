@@ -19,6 +19,7 @@ class TokenData(BaseModel):
 
 
 class TokenService:
+    """Сервис создания и валидации токенов авторизации"""
     def __init__(self):
         self.jwt_secret = config.auth.jwt_secret.get_secret_value()
         self.jwt_encode_algorithm = config.auth.jwt_encode_algorithm
@@ -58,9 +59,24 @@ def get_token_service() -> TokenService:
 
 
 class AuthService:
+    """Сервис авторизации"""
     def __init__(self, repo: UserRepository, token_service: TokenService):
         self.user_repo = repo
         self.token_service = token_service
+
+    @staticmethod
+    def verify_password(hashed_password: str, password: str) -> bool:
+        """
+        Проверяет пароль против хеша.
+        """
+        if not password or not hashed_password:
+            return False
+        
+        try:
+            return bcrypt.checkpw(password.encode("utf-8"), hashed_password.encode("utf-8"))
+        except (ValueError, TypeError):
+            # Некорректный формат хеша
+            return False
 
     async def register(self, user_in: AuthRegister):
         """New user registration"""
@@ -96,7 +112,8 @@ class AuthService:
 
         user = await self.user_repo.get_by_email(email)
 
-        if not user or not user.verify_password(password):
+        # Проверяем пароль через сервис для защиты от timing attack
+        if not user or not self.verify_password(user.password, password):
             logger.warning("Failed login", extra={"email": email})
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

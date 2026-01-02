@@ -12,7 +12,7 @@ async def lifespan(_):
     prometheus_thread = threading.Thread(
         target=start_http_server,
         args=(config.prometheus.metrics_port,),
-        kwargs={"registry": registry},  # Используем тот же registry, что и в setup_metrics
+        kwargs={"registry": registry},
         daemon=True,
         name="prometheus-metrics-server",
     )
