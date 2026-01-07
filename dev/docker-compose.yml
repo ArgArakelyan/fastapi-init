@@ -1,0 +1,49 @@
+services:
+  app-backend:
+    container_name: tiny-backend
+    build:
+      context: ../
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+      - "9010:9010"
+    env_file:
+      - .env
+  redis:
+    image: redis:7-alpine
+    command: [
+      "redis-server",
+      "--appendonly", "yes",
+      "--save", "60", "1000",
+#      "--requirepass", "fastapi"
+    ]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-app-data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-a", "fastapi", "ping" ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: fastapi
+      POSTGRES_USER: fastapi
+      POSTGRES_PASSWORD: fastapi
+    volumes:
+      - pg-app-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U fastapi -d fastapi -h localhost" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+volumes:
+  redis-app-data:
+  pg-app-data:
+#  rabbitmq-data:
