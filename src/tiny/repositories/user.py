@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from tiny.core.config import config
 from tiny.core.dependencies import get_redis, get_session
-from tiny.services.auth.models import User, UserCache
+from tiny.models.user import User
 from tiny.utils.cache import deserialize, serialize
 
 logger = logging.getLogger(__name__)

@@ -8,8 +8,9 @@ from jose import jwt
 from pydantic import BaseModel
 
 from tiny.core.config import config
-from tiny.services.auth.models import AuthRegister, User
-from tiny.services.auth.repository import UserRepository, get_user_repository
+from tiny.models.auth import AuthRegister
+from tiny.models.user import User
+from tiny.repositories.user import UserRepository, get_user_repository
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,7 @@ class TokenData(BaseModel):
 
 class TokenService:
     """Сервис создания и валидации токенов авторизации"""
+
     def __init__(self):
         self.jwt_secret = config.auth.jwt_secret.get_secret_value()
         self.jwt_encode_algorithm = config.auth.jwt_encode_algorithm
@@ -61,6 +63,7 @@ def get_token_service() -> TokenService:
 
 class AuthService:
     """Сервис авторизации"""
+
     def __init__(self, repo: UserRepository, token_service: TokenService):
         self.user_repo = repo
         self.token_service = token_service
@@ -72,7 +75,7 @@ class AuthService:
         """
         if not password or not hashed_password:
             return False
-        
+
         try:
             return bcrypt.checkpw(password.encode("utf-8"), hashed_password.encode("utf-8"))
         except (ValueError, TypeError):
@@ -134,16 +137,16 @@ class AuthService:
 
 
 def get_auth_service(
-    repo: UserRepository = Depends(get_user_repository),
-    token_service: TokenService = Depends(get_token_service),
+        repo: UserRepository = Depends(get_user_repository),
+        token_service: TokenService = Depends(get_token_service),
 ) -> AuthService:
     return AuthService(repo, token_service)
 
 
 async def get_current_user(
-    request: Request,
-    repo: UserRepository = Depends(get_user_repository),
-    token_service: TokenService = Depends(get_token_service),
+        request: Request,
+        repo: UserRepository = Depends(get_user_repository),
+        token_service: TokenService = Depends(get_token_service),
 ):
     token = request.cookies.get("access_token")
     if token is None:
@@ -163,8 +166,8 @@ async def get_current_user(
 
 
 async def get_optional_current_user(
-    request: Request,
-    auth_service: AuthService = Depends(get_auth_service),
+        request: Request,
+        auth_service: AuthService = Depends(get_auth_service),
 ) -> int | None:
     token = request.cookies.get("access_token")
     if not token:

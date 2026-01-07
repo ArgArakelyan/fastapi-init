@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from tiny.services.auth.router import router as auth_router
+from tiny.routers.auth import router as auth_router
 
 api_router = APIRouter()
 

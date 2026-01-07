@@ -73,7 +73,7 @@ class DbManager:
         try:
             await self.check_alive_db()
             logger.info(
-                "Postgres connection successfully",
+                "Postgres connection established successfully",
                 extra={
                     "pool_size": self.pool_size,
                     "application_name": self.application_name,
