@@ -30,6 +30,7 @@ class TokenService:
         )
 
         payload = {"type": "access", "sub": str(user_id), "exp": expires}
+        logger.debug("Access token created", extra={"user_id": user_id})
         return jwt.encode(payload, self.jwt_secret, algorithm=self.jwt_encode_algorithm)
 
     def decode_token(self, token: str) -> TokenData:
@@ -76,6 +77,7 @@ class AuthService:
             return bcrypt.checkpw(password.encode("utf-8"), hashed_password.encode("utf-8"))
         except (ValueError, TypeError):
             # Некорректный формат хеша
+            logger.warning("Invalid password hash")
             return False
 
     async def register(self, user_in: AuthRegister):

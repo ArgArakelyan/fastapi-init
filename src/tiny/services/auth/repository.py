@@ -52,7 +52,7 @@ class UserRepository:
 
         cached = await self.redis.get(cache_key)
         if (exists_cached := deserialize(cached)) is not None:
-            logger.debug(f"User existence cache hit: {user_id} -> {exists_cached}")
+            logger.debug(f"User existence cache hit")
             return user_id if exists_cached else None
 
         user_exists = await self.session.scalar(
@@ -61,7 +61,7 @@ class UserRepository:
 
         await self.redis.setex(cache_key, self.CACHE_TTL, serialize(user_exists))
         logger.debug(
-            f"User existence cache miss and stored: {user_id} -> {user_exists}"
+            f"User existence cache miss and stored"
         )
 
         return user_id if user_exists else None
