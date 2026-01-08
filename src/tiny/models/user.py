@@ -20,6 +20,6 @@ class User(Base):
 
 
 class UserRead(BaseModel):
-    id: str
+    id: int
     email: str
     created_at: datetime

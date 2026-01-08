@@ -11,7 +11,7 @@ router = APIRouter()
 
 
 @router.post("/register")
-@auth_rate_limit("auth_login")
+@auth_rate_limit("auth_register")
 async def auth_register(
     request: Request,  # noqa
     user_in: AuthRegister,
@@ -76,7 +76,7 @@ async def auth_logout(response: Response):
     return {"result": "success", "msg": "You have been logged out"}
 
 
-@router.get("/me")
-@auth_rate_limit("account_refresh")
-async def account_info(request: Request, current_user: CurrentUser):  # noqa
-    return {"result": "success", "user_id": current_user.id}
+@router.post("/refresh")
+@auth_rate_limit("auth_refresh")
+async def auth_refresh(request: Request):
+    pass
