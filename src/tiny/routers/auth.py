@@ -2,10 +2,9 @@ from fastapi import (APIRouter, Depends, HTTPException, Request, Response,
                      status)
 
 from tiny.core.rate_limiting import auth_rate_limit
-from tiny.services.auth import AuthService, CurrentUser, get_optional_current_user, get_auth_service
-
 from tiny.models.auth import AuthLogin, AuthRegister
-
+from tiny.services.auth import (AuthService, get_auth_service,
+                                get_optional_current_user)
 
 router = APIRouter()
 
@@ -78,5 +77,5 @@ async def auth_logout(response: Response):
 
 @router.post("/refresh")
 @auth_rate_limit("auth_refresh")
-async def auth_refresh(request: Request):
+async def auth_refresh(request: Request):  # noqa
     pass

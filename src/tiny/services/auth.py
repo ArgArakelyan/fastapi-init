@@ -28,7 +28,9 @@ class AuthService:
             return False
 
         try:
-            return bcrypt.checkpw(password.encode("utf-8"), hashed_password.encode("utf-8"))
+            return bcrypt.checkpw(
+                password.encode("utf-8"), hashed_password.encode("utf-8")
+            )
         except (ValueError, TypeError):
             # Некорректный формат хеша
             logger.warning("Invalid password hash")
@@ -69,14 +71,14 @@ class AuthService:
         user = await self.user_repo.get_by_email(email)
 
         # Проверяем пароль через сервис для защиты от timing attack
-        if not user or not self.verify_password(user.password, password): # noqa
+        if not user or not self.verify_password(user.password, password):  # noqa
             logger.warning("Failed login", extra={"email": email})
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect email or password",
             )
 
-        access_token = self.token_service.create_access_token(user.id) # noqa
+        access_token = self.token_service.create_access_token(user.id)  # noqa
         logger.debug("User logged in", extra={"user_id": user.id})
 
         return {
@@ -88,16 +90,16 @@ class AuthService:
 
 
 def get_auth_service(
-        repo: UserRepository = Depends(get_user_repository),
-        token_service: TokenService = Depends(get_token_service),
+    repo: UserRepository = Depends(get_user_repository),
+    token_service: TokenService = Depends(get_token_service),
 ) -> AuthService:
     return AuthService(repo, token_service)
 
 
 async def get_current_user(
-        request: Request,
-        repo: UserRepository = Depends(get_user_repository),
-        token_service: TokenService = Depends(get_token_service),
+    request: Request,
+    repo: UserRepository = Depends(get_user_repository),
+    token_service: TokenService = Depends(get_token_service),
 ):
     token = request.cookies.get("access_token")
     if token is None:
@@ -117,8 +119,8 @@ async def get_current_user(
 
 
 async def get_optional_current_user(
-        request: Request,
-        auth_service: AuthService = Depends(get_auth_service),
+    request: Request,
+    auth_service: AuthService = Depends(get_auth_service),
 ) -> int | None:
     token = request.cookies.get("access_token")
     if not token:

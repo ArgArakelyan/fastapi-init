@@ -150,7 +150,9 @@ class DbManager:
             await wait_for(_probe(), timeout=timeout)
             return True
         except (TimeoutError, SQLAlchemyError, Exception) as e:
-            logger.error("Postgres connection error", extra={"timeout": timeout, "error": str(e)})
+            logger.error(
+                "Postgres connection error", extra={"timeout": timeout, "error": str(e)}
+            )
             return False
 
     async def dispose(self) -> None:

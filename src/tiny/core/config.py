@@ -54,6 +54,7 @@ class AuthConfig(BaseSettings):
     jwt_secret: SecretStr
     access_token_expire_minutes: int = 30
     jwt_encode_algorithm: str = "HS256"
+    bearer_token: SecretStr
 
     model_config = {"env_prefix": "AUTH_", "extra": "ignore"}
 

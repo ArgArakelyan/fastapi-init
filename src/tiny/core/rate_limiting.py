@@ -15,7 +15,7 @@ from tiny.core.metrics import registry
 logger = logging.getLogger(__name__)
 
 RATE_LIMITS = {
-    "auth_register": "5/minute; 20/day", # OAuth register attempts
+    "auth_register": "5/minute; 20/day",  # OAuth register attempts
     "auth_login": "10/minute; 30/hour",  # OAuth loggin attempts
     "auth_refresh": "20/minute",  # Token refresh attempts
 }

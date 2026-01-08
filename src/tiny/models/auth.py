@@ -1,8 +1,10 @@
 import bcrypt
 from pydantic import BaseModel, field_validator
 
+
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
 
 class AuthBase(BaseModel):
     email: str

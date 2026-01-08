@@ -42,7 +42,7 @@ class UserRepository:
 
         try:
             return UserRead.model_validate(data)
-        except Exception: # noqa
+        except Exception:  # noqa
             # если схема изменилась/битые данные – просто считаем кэш протухшим
             return None
 
@@ -70,6 +70,15 @@ class UserRepository:
             )
             raise
 
+    async def get_all(self, limit, offset):
+        query = select(User).order_by(User.created_at)
+
+        if limit > 0:
+            query = query.offset(offset).limit(limit)
+
+        result = await self.session.execute(query)
+        return result.scalars().all()
+
     async def get_by_email(self, email: str) -> User | None:
         result = await self.session.execute(select(User).where(User.email == email))
         return result.scalar_one_or_none()
@@ -87,9 +96,7 @@ class UserRepository:
         )
 
         await self.redis.setex(cache_key, self.CACHE_TTL, serialize(user_exists))
-        logger.debug(
-            f"User existence cache miss and stored"
-        )
+        logger.debug(f"User existence cache miss and stored")
 
         return user_id if user_exists else None
 
@@ -101,18 +108,12 @@ class UserRepository:
 
         logger.debug("User cache miss", extra={"user": {"id": user_id}})
 
-        result = await self.session.execute(
-            select(User).where(User.id == user_id)
-        )
+        result = await self.session.execute(select(User).where(User.id == user_id))
         user: User | None = result.scalar_one_or_none()
         if not user:
             return None
 
-        user_read = UserRead(
-            id=user.id,
-            email=user.email,
-            created_at=user.created_at,
-        )
+        user_read = UserRead(id=user.id, email=user.email, created_at=user.created_at)
 
         await self._set_user_cache(user_read)
 

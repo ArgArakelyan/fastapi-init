@@ -1,9 +1,11 @@
-from contextlib import asynccontextmanager
 import threading
+from contextlib import asynccontextmanager
+
 from prometheus_client import start_http_server
-from tiny.core.metrics import registry
+
 from tiny.core.config import config
 from tiny.core.database import db
+from tiny.core.metrics import registry
 from tiny.core.redis import redis_manager
 
 
