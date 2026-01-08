@@ -25,7 +25,6 @@ RATE_LIMITS = {
 class RateLimiter:
     def __init__(self):
         self.redis_storage_uri = config.redis.REDIS_URI
-        self.redis_key_prefix = "rl:"
         self._limiter = Limiter(
             key_func=self.get_rate_limit_key,
             storage_uri=self.redis_storage_uri,
@@ -35,12 +34,23 @@ class RateLimiter:
 
     @staticmethod
     def get_rate_limit_key(request: Request):
-        try:
-            auth_header = request.headers.get("authorization")
-            if auth_header and auth_header.startswith("Bearer "):
-                pass
-        except Exception as e:
-            logger.debug(f"Failed to extract user from token: {e}")
+        """Определяет ключ для лимитирования на основе запроса.
+
+        Приоритеты определния ключа:
+        1 - достаем IP адрес из запроса
+        2 - достаем IP с помощью готовой функции slowAPI
+        3 - Fallback значение "unknown" в случае ошибки
+
+        :arg
+            request (Request): Объект запроса FastAPI
+
+        :returns
+            str: ключ для идентификации клиента (IP-адрес)
+
+        :raises
+            логирует предупреждение, не прерывает запрос
+
+        """
 
         try:
             if hasattr(request, "client") and hasattr(request.client, "host"):
@@ -48,13 +58,14 @@ class RateLimiter:
             else:
                 return get_remote_address(request)
         except Exception as e:
+            # todo: на будущее придумать как поступать в случае ошибки
             logger.warning(f"Failed to get remote address for rate limiting: {e}")
             # Ultimate fallback
             return "unknown"
 
     def limit(self, rate_limit_str: str) -> Callable:
         """
-        Декоратор для ограничения запросов
+        Декоратор для применения ограничения запросов к функциям
         """
 
         def decorator(func: Callable) -> Callable:

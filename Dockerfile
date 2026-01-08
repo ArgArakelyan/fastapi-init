@@ -40,4 +40,4 @@ USER appuser
 
 EXPOSE 8000 9010
 
-CMD ["uvicorn", "tiny.main:app", "--host", "0.0.0.0", "--port", "8000", "--log-level", "debug"]
+CMD ["uvicorn", "tiny.main:app", "--proxy-headers", "--forwarded-allow-ips=*", "--host", "0.0.0.0", "--port", "8000", "--log-level", "debug"]

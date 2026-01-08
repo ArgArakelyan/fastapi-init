@@ -12,9 +12,35 @@ DEFAULT_ALLOWED_METHODS = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "P
 
 
 class SecurityMiddleware(BaseHTTPMiddleware):
+    """Middleware обрабатывает все входящие запросы и добавляет уровень безопасности
+    перед их обработкой основным приложением.
+
+    Выполняет следующее:
+    1 - проверка размера запроса (ограничение до 10MiB)
+    2 - Валидация http методов (разрешает только стандартные методы)
+    3 - Добавляет нужные загаловки к ответам (для безопасности)
+    4 - Обработка исключений с возвратом безопасных ошибок
+    """
+
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
+        """
+
+        :arg
+            request (Request): Объект HTTP-запроса
+            call_next (RequestResponseEndpoint): Следующий обработчик в цепочке middleware
+
+        :returns:
+            Response: HTTP-ответ с примененными политиками безопасности
+
+        :raises:
+            Возвращает JSONResponse с кодом ошибки вместо выбрасывания исключений:
+            - 413: Если превышен максимальный размер запроса (10MB)
+            - 400: Если неверный формат Content-Length
+            - 405: Если используется неразрешенный HTTP-метод
+            - 500: При внутренних ошибках middleware
+        """
         try:
             if request.method == "OPTIONS":
                 response = await call_next(request)
@@ -96,6 +122,21 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
     @staticmethod
     def add_security_headers(response: Response, request: Request) -> Response:
+        """Добавляет security-заголовки к HTTP-ответу.
+
+        - X-Content-Type-Options: nosniff - предотвращает MIME-sniffing
+        - X-Frame-Options: DENY - запрещает встраивание в iframe
+        - X-XSS-Protection: 1; mode=block - включает защиту от XSS в браузере
+        - Referrer-Policy: same-origin - ограничивает передачу Referer
+
+        :arg
+            response (Response): Объект HTTP-ответа
+            request (Request): Объект HTTP-запроса (не используется, но сохранен для совместимости)
+
+        :returns:
+            Response: Ответ с добавленными security-заголовками
+        """
+
         response.headers.update(
             {
                 "X-Content-Type-Options": "nosniff",
@@ -110,7 +151,10 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
 def is_suspicious_ip(ip: str) -> bool:
     """
-    Check if IP address looks suspicious.
+    Проверяет, является ли IP-адрес подозрительным
+
+    IP-адреса из приватных диапазонов считаются безопасными
+    Все остальные IP-адреса пока считаются безопасными
     """
     # Private/local IPs are generally safe
     private_ranges = ["127.0.0.1", "10.", "192.168.", "172."]
@@ -125,6 +169,7 @@ def is_suspicious_ip(ip: str) -> bool:
 
 
 def validate_request_size(content_length: Optional[int] = None) -> bool:
+    """Проверяет, не превышает ли размер запроса максимально допустимое значение"""
     MAX_REQUEST_SIZE = 10 * 1024 * 1024  # 10MB # noqa
 
     if content_length and content_length > MAX_REQUEST_SIZE:
