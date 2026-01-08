@@ -10,6 +10,7 @@ from typing import AsyncGenerator, Optional
 
 from sqlalchemy import event, text
 from sqlalchemy.engine.url import make_url
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import (AsyncEngine, AsyncSession,
                                     async_sessionmaker, create_async_engine)
 from sqlalchemy.orm import DeclarativeBase
@@ -145,7 +146,12 @@ class DbManager:
             async with self._engine.connect() as conn:
                 await conn.execute(text("SELECT 1"))
 
-        await wait_for(_probe(), timeout=timeout)
+        try:
+            await wait_for(_probe(), timeout=timeout)
+            return True
+        except (TimeoutError, SQLAlchemyError, Exception) as e:
+            logger.error("Postgres connection error", extra={"timeout": timeout, "error": str(e)})
+            return False
 
     async def dispose(self) -> None:
         """

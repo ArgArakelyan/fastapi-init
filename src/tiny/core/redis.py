@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import Any, Optional
 
@@ -83,6 +84,15 @@ class RedisManager:
             return result > 0
         except RedisError:
             logger.error("Failed to to check existence of key {} from Redis", key)
+            return False
+
+    async def check_alive(self, timeout: float = 0.5) -> bool:
+        client = await self.get_client()
+        try:
+            await asyncio.wait_for(client.ping(), timeout=timeout)
+            return True
+        except (RedisError, asyncio.TimeoutError):
+            logger.error("Redis health check failed", exc_info=True)
             return False
 
 

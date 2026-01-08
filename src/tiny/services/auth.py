@@ -1,64 +1,15 @@
 import logging
-from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 import bcrypt
 from fastapi import Depends, HTTPException, Request, status
-from jose import jwt
-from pydantic import BaseModel
 
-from tiny.core.config import config
 from tiny.models.auth import AuthRegister
 from tiny.models.user import User
 from tiny.repositories.user import UserRepository, get_user_repository
+from tiny.services.token import TokenService, get_token_service
 
 logger = logging.getLogger(__name__)
-
-
-class TokenData(BaseModel):
-    user_id: int
-
-
-class TokenService:
-    """Сервис создания и валидации токенов авторизации"""
-
-    def __init__(self):
-        self.jwt_secret = config.auth.jwt_secret.get_secret_value()
-        self.jwt_encode_algorithm = config.auth.jwt_encode_algorithm
-
-    def create_access_token(self, user_id: int) -> str:
-        expires = datetime.now(timezone.utc) + timedelta(
-            minutes=config.auth.access_token_expire_minutes
-        )
-
-        payload = {"type": "access", "sub": str(user_id), "exp": expires}
-        logger.debug("Access token created", extra={"user_id": user_id})
-        return jwt.encode(payload, self.jwt_secret, algorithm=self.jwt_encode_algorithm)
-
-    def decode_token(self, token: str) -> TokenData:
-        try:
-            payload = jwt.decode(
-                token, self.jwt_secret, algorithms=[self.jwt_encode_algorithm]
-            )
-
-            if payload.get("type") != "access":
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid token type",
-                )
-
-            return TokenData(user_id=int(payload["sub"]))
-        except jwt.ExpiredSignatureError:
-            raise HTTPException(status_code=401, detail="Token expired")
-        except jwt.JWTError as e:
-            logger.warning(
-                "JWT Error on decode", extra={"access_token": token, "error": str(e)}
-            )
-            raise HTTPException(status_code=401, detail="Invalid token")
-
-
-def get_token_service() -> TokenService:
-    return TokenService()
 
 
 class AuthService:
@@ -118,14 +69,14 @@ class AuthService:
         user = await self.user_repo.get_by_email(email)
 
         # Проверяем пароль через сервис для защиты от timing attack
-        if not user or not self.verify_password(user.password, password):
+        if not user or not self.verify_password(user.password, password): # noqa
             logger.warning("Failed login", extra={"email": email})
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect email or password",
             )
 
-        access_token = self.token_service.create_access_token(user.id)
+        access_token = self.token_service.create_access_token(user.id) # noqa
         logger.debug("User logged in", extra={"user_id": user.id})
 
         return {
