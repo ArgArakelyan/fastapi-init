@@ -63,6 +63,14 @@ class TokenService:
         logger.debug("Refresh token created", extra={"user_id": user_id})
         return jwt.encode(payload, self.jwt_secret, algorithm=self.jwt_encode_algorithm)
 
+    def create_password_reset_token(self, email: str) -> str:
+        expires = datetime.now(timezone.utc) + timedelta(minutes=5)
+
+        payload = {"type": "password_reset", "sub": str(email), "exp": expires}
+        logger.debug("Password reset token created", extra={"email": email})
+        return jwt.encode(payload, self.jwt_secret, algorithm=self.jwt_encode_algorithm)
+
+
     def decode_token(self, token: str) -> TokenData:
         try:
             payload = jwt.decode(

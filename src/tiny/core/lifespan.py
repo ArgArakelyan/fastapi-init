@@ -1,6 +1,8 @@
 import threading
 from contextlib import asynccontextmanager
 
+from fastapi import FastAPI
+from faststream.rabbit import RabbitBroker
 from prometheus_client import start_http_server
 
 from tiny.core.config import config
@@ -10,7 +12,7 @@ from tiny.core.redis import redis_manager
 
 
 @asynccontextmanager
-async def lifespan(_):
+async def lifespan(app: FastAPI):  # noqa
     prometheus_thread = threading.Thread(
         target=start_http_server,
         args=(config.prometheus.metrics_port,),
@@ -22,8 +24,9 @@ async def lifespan(_):
 
     await db.init()
     await redis_manager.connect()
-    try:
+    app.state.broker = RabbitBroker(config.rabbitmq.RABBITMQ_URI)  # noqa
+    async with app.state.broker:  # noqa
         yield
-    finally:
-        await redis_manager.disconnect()
-        await db.dispose()
+
+    await redis_manager.disconnect()
+    await db.dispose()

@@ -1,9 +1,9 @@
-from fastapi import (APIRouter, Depends, HTTPException, Request, Response,
-                     status)
+from fastapi import (APIRouter, BackgroundTasks, Depends, HTTPException,
+                     Request, Response, status)
 
-from tiny.core.rate_limiting import auth_rate_limit
+from tiny.core.rate_limiting import auth_rate_limit, rate_limit
 from tiny.models.auth import AuthBase
-from tiny.services.auth import (AuthService, get_auth_service,
+from tiny.services.auth import (AuthService, CurrentUser, get_auth_service,
                                 get_optional_current_user)
 
 router = APIRouter()
@@ -137,3 +137,24 @@ async def auth_refresh(
         "result": "success",
         "access_token": new_tokens["access_token"],
     }
+
+
+@router.post("/password/reset")
+@rate_limit("3/minute")
+async def auth_reset_password(
+    request: Request,  # noqa
+    email: str,
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    return await auth_service.reset_password(email)
+
+
+@router.post("/password/reset/verify")
+@rate_limit("5/minute")
+async def auth_reset_password_verify(
+    request: Request,  # noqa
+    email: str,
+    reset_code: str,
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    return await auth_service.verify_reset_code(email, reset_code)

@@ -44,6 +44,26 @@ class RedisConfig(BaseSettings):
     model_config = {"env_prefix": "REDIS_", "extra": "ignore"}
 
 
+class RabbitConfig(BaseSettings):
+    host: str = "rabbitmq"  # ← ИЗМЕНИТЕ!
+    port: int = 5672
+    user: str = "guest"
+    password: str = "guest"
+    vhost: str = ""
+
+    heartbeat: int = 60
+    connection_attempts: int = 3
+    retry_delay: int = 5
+
+    @property
+    def RABBITMQ_URI(self) -> str:
+        return (
+            f"amqp://{self.user}:{self.password}@{self.host}:{self.port}/{self.vhost}"
+        )
+
+    model_config = {"env_prefix": "RABBITMQ_", "extra": "ignore"}
+
+
 class PrometheusConfig(BaseSettings):
     metrics_port: int = 9010
 
@@ -72,6 +92,7 @@ class Config(BaseSettings):
     app: AppConfig = Field(default_factory=AppConfig)
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
     redis: RedisConfig = Field(default_factory=RedisConfig)
+    rabbitmq: RabbitConfig = Field(default_factory=RabbitConfig)
     prometheus: PrometheusConfig = Field(default_factory=PrometheusConfig)
     auth: AuthConfig = Field(default_factory=AuthConfig)
     feature: FeatureConfig = Field(default_factory=FeatureConfig)

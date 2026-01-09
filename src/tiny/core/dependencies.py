@@ -1,7 +1,8 @@
 from typing import AsyncGenerator
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from faststream.rabbit import RabbitBroker
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,6 +27,13 @@ async def get_redis() -> AsyncGenerator[Redis, None]:
         yield client
     finally:
         pass
+
+
+async def get_broker(request: Request) -> RabbitBroker:
+    """Получаем уже подключенный брокер из app.state"""
+    if not hasattr(request.app.state, "broker"):
+        raise HTTPException(503, "RabbitMQ broker unavailable")
+    return request.app.state.broker
 
 
 def verify_bearer_token(creds: HTTPAuthorizationCredentials = Depends(security)):
