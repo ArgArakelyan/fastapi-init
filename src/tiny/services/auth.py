@@ -32,6 +32,12 @@ class AuthService:
         self.broker = broker
 
     @staticmethod
+    def hash_password(password: str) -> str:
+        return bcrypt.hashpw(
+            password.encode(), bcrypt.gensalt()
+        ).decode()
+
+    @staticmethod
     def verify_password(hashed_password: str, password: str) -> bool:
         """Простейший рабочий вариант"""
         if not password or not hashed_password:
@@ -98,7 +104,7 @@ class AuthService:
         """Эндпоинт для обновления токенов"""
         return await self.token_service.refresh_access_token(refresh_token)
 
-    async def reset_password(self, email: str):
+    async def reset_password(self, email: str, x_request_id: str):
         user = await self.user_repo.get_by_email(email)
 
         if user is None:
@@ -115,7 +121,7 @@ class AuthService:
             message={"user_id": user.id, "email": email, "reset_code": reset_code},
             queue="email.reset_password",
             expiration=600,
-            correlation_id=str(user.id),
+            correlation_id=x_request_id,
         )
         logger.info(
             "Password reset code sent to broker",
@@ -135,6 +141,8 @@ class AuthService:
             raise HTTPException(400, "Invalid or expired code")
 
         await self.redis.delete(redis_key)
+
+        logger.info("User verified password reset code", extra={"email": email})
 
         reset_token = self.token_service.create_password_reset_token(email)
 

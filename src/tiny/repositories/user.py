@@ -137,6 +137,51 @@ class UserRepository:
             )
             return False
 
+    async def update_password(self, identifier: str, new_password: str) -> bool:
+        try:
+            logger.debug(
+                "Updating user password",
+                extra={"user": {"identifier": identifier}}
+            )
+
+            if identifier.isdigit():
+                stmt = select(User).where(User.id == int(identifier))
+            else:
+                stmt = select(User).where(User.email == identifier)
+
+            result = await self.session.execute(stmt)
+            user: User | None = result.scalar_one_or_none()
+
+            if not user:
+                logger.warning(
+                    "User not found for password update",
+                    extra={"user": {"identifier": identifier}}
+                )
+                return False
+
+            # Обновляем пароль
+            user.password = new_password
+            await self.session.commit()
+
+            # Инвалидируем кэш
+            await self.redis.delete(self._cache_key_exists(user.id))
+            await self._invalidate_user_cache(user.id)
+
+            logger.info(
+                "User password updated successfully",
+                extra={"user": {"id": user.id, "email": user.email}}
+            )
+            return True
+
+        except Exception as e:
+            await self.session.rollback()
+            logger.error(
+                "Failed to update user password",
+                extra={"user": {"identifier": identifier}},
+                exc_info=e
+            )
+            return False
+
 
 def get_user_repository(
     session: AsyncSession = Depends(get_session), redis=Depends(get_redis)

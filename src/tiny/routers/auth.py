@@ -1,8 +1,10 @@
 from fastapi import (APIRouter, BackgroundTasks, Depends, HTTPException,
-                     Request, Response, status)
-
+                     Request, Response, status, Header)
+from jose import jwt
+from tiny.core.config import  config
 from tiny.core.rate_limiting import auth_rate_limit, rate_limit
 from tiny.models.auth import AuthBase
+from tiny.repositories.user import UserRepository, get_user_repository
 from tiny.services.auth import (AuthService, CurrentUser, get_auth_service,
                                 get_optional_current_user)
 
@@ -146,7 +148,8 @@ async def auth_reset_password(
     email: str,
     auth_service: AuthService = Depends(get_auth_service),
 ):
-    return await auth_service.reset_password(email)
+    x_request_id = request.headers.get("x-request-id")
+    return await auth_service.reset_password(email, x_request_id)
 
 
 @router.post("/password/reset/verify")
@@ -158,3 +161,29 @@ async def auth_reset_password_verify(
     auth_service: AuthService = Depends(get_auth_service),
 ):
     return await auth_service.verify_reset_code(email, reset_code)
+
+
+
+@router.post("/password/reset-final")
+async def auth_finalize_reset_password(
+    new_password: str,
+    auth_service: AuthService = Depends(get_auth_service),
+    user_repo: UserRepository = Depends(get_user_repository),
+    token: str = Header(..., alias="Authorization", description="Reset token"),
+):
+    payload = jwt.decode(token.replace("Bearer ", ""), config.auth.jwt_secret.get_secret_value())
+    email = payload["sub"]
+
+    user = await user_repo.get_by_email(email)
+
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    hashed_password = auth_service.hash_password(new_password)
+
+    result = await user_repo.update_password(identifier=email, new_password=hashed_password)
+
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Something went wrong")
+
+    return {"message": "Password reset successfully"}
