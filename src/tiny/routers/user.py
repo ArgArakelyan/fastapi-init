@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request, Query
+from fastapi import APIRouter, Depends, Query, Request
 
 from tiny.core.dependencies import verify_bearer_token
 from tiny.core.rate_limiting import rate_limit
@@ -25,7 +25,7 @@ async def me(
 )
 @rate_limit("10/minute")
 async def get_users(
-    request: Request, # noqa
+    request: Request,  # noqa
     limit: int = 0,
     offset: int = 0,
     user_repository: UserRepository = Depends(get_user_repository),
@@ -40,7 +40,7 @@ async def get_users(
 )
 @rate_limit("100/minute")
 async def get_user_by_email(
-    request: Request, # noqa
+    request: Request,  # noqa
     email: str = Query(..., description="User email"),
     user_repository: UserRepository = Depends(get_user_repository),
 ):
@@ -52,9 +52,8 @@ async def get_user_by_email(
 )
 @rate_limit("100/minute")
 async def get_user_by_id(
-    request: Request, # noqa
+    request: Request,  # noqa
     user_id: int,
     user_repository: UserRepository = Depends(get_user_repository),
 ):
     return await user_repository.get_by_id(user_id)
-

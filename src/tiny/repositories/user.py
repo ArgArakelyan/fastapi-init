@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from tiny.core.config import config
 from tiny.core.dependencies import get_redis, get_session
-from tiny.models.user import User, UserRead
+from tiny.models.user import User, UserAuth, UserRead
 from tiny.utils.cache import deserialize, serialize
 
 logger = logging.getLogger(__name__)
@@ -79,16 +79,20 @@ class UserRepository:
         result = await self.session.execute(query)
         return result.scalars().all()
 
-    async def get_by_email(self, email: str) -> User | None:
+    async def get_by_email(self, email: str) -> UserAuth | None:
         result = await self.session.execute(select(User).where(User.email == email))
-        return result.scalar_one_or_none()
+        user = result.scalar_one_or_none()
+        if not user:
+            return None
+
+        return UserAuth(id=user.id, password=user.password, email=user.email)
 
     async def get_exists_by_id(self, user_id: int) -> int | None:
         cache_key = self._cache_key_exists(user_id)
 
         cached = await self.redis.get(cache_key)
         if (exists_cached := deserialize(cached)) is not None:
-            logger.debug(f"User existence cache hit")
+            logger.debug("User existence cache hit")
             return user_id if exists_cached else None
 
         user_exists = await self.session.scalar(
@@ -96,7 +100,7 @@ class UserRepository:
         )
 
         await self.redis.setex(cache_key, self.CACHE_TTL, serialize(user_exists))
-        logger.debug(f"User existence cache miss and stored")
+        logger.debug("User existence cache miss and stored")
 
         return user_id if user_exists else None
 

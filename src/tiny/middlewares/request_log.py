@@ -2,7 +2,7 @@ import uuid
 from contextvars import ContextVar
 
 import structlog
-from fastapi import Request, Response
+from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 
 request_id_var: ContextVar[str] = ContextVar("request_id", default="no-request")

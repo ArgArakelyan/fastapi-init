@@ -53,6 +53,7 @@ class PrometheusConfig(BaseSettings):
 class AuthConfig(BaseSettings):
     jwt_secret: SecretStr
     access_token_expire_minutes: int = 30
+    refresh_token_expire_days: int = 7
     jwt_encode_algorithm: str = "HS256"
     bearer_token: SecretStr
 

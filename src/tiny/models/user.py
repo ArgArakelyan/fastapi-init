@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel
 from sqlalchemy import Boolean, DateTime, Integer, String
@@ -24,3 +23,9 @@ class UserRead(BaseModel):
     id: int
     email: str
     created_at: datetime
+
+
+class UserAuth(BaseModel):
+    id: int
+    email: str
+    password: str

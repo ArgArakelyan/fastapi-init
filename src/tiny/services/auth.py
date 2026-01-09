@@ -4,7 +4,7 @@ from typing import Annotated
 import bcrypt
 from fastapi import Depends, HTTPException, Request, status
 
-from tiny.models.auth import AuthRegister
+from tiny.models.auth import AuthBase
 from tiny.models.user import User
 from tiny.repositories.user import UserRepository, get_user_repository
 from tiny.services.token import TokenService, get_token_service
@@ -21,22 +21,18 @@ class AuthService:
 
     @staticmethod
     def verify_password(hashed_password: str, password: str) -> bool:
-        """
-        Проверяет пароль против хеша.
-        """
+        """Простейший рабочий вариант"""
         if not password or not hashed_password:
             return False
 
         try:
-            return bcrypt.checkpw(
-                password.encode("utf-8"), hashed_password.encode("utf-8")
-            )
+            return bcrypt.checkpw(password.encode(), hashed_password.encode())
         except (ValueError, TypeError):
             # Некорректный формат хеша
             logger.warning("Invalid password hash")
             return False
 
-    async def register(self, user_in: AuthRegister):
+    async def register(self, user_in: AuthBase):
         """New user registration"""
         exists = await self.user_repo.get_by_email(user_in.email)
 
@@ -46,14 +42,12 @@ class AuthService:
             )
 
         hashed_password = bcrypt.hashpw(
-            user_in.password.encode("utf-8"), bcrypt.gensalt()
-        ).decode("utf-8")
+            user_in.password.encode(), bcrypt.gensalt()
+        ).decode()
 
         user = await self.user_repo.create(
             email=user_in.email, password=hashed_password
         )
-
-        logger.info("User registered", extra={"user_id": user.id})
         return user
 
     async def login(self, email, password, client_ip, user_agent):
@@ -71,22 +65,26 @@ class AuthService:
         user = await self.user_repo.get_by_email(email)
 
         # Проверяем пароль через сервис для защиты от timing attack
-        if not user or not self.verify_password(user.password, password):  # noqa
+        if not user or not self.verify_password(user.password, password):
             logger.warning("Failed login", extra={"email": email})
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect email or password",
             )
 
-        access_token = self.token_service.create_access_token(user.id)  # noqa
-        logger.debug("User logged in", extra={"user_id": user.id})
+        tokens = await self.token_service.create_tokens_pair(user.id)
+        logger.info("User logged in", extra={"user_id": user.id})
 
         return {
-            "access_token": access_token,
+            **tokens,
             "token_type": "bearer",
             "user_id": user.id,
             "email": user.email,
         }
+
+    async def refresh_token(self, refresh_token: str):
+        """Эндпоинт для обновления токенов"""
+        return await self.token_service.refresh_access_token(refresh_token)
 
 
 def get_auth_service(
@@ -120,14 +118,14 @@ async def get_current_user(
 
 async def get_optional_current_user(
     request: Request,
-    auth_service: AuthService = Depends(get_auth_service),
+    token_service: TokenService = Depends(get_token_service),
 ) -> int | None:
     token = request.cookies.get("access_token")
     if not token:
         return None
 
     try:
-        token_data = auth_service.token_service.decode_token(token)
+        token_data = token_service.decode_token(token)
     except HTTPException:
         return None
 

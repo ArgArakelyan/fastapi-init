@@ -65,7 +65,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                         )
                 except ValueError:
                     logger.warning(
-                        f"Invalid Content-Length header",
+                        "Invalid Content-Length header",
                         extra={
                             "request": {
                                 "content_length": content_length,
@@ -84,7 +84,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             # request method validation
             if request.method not in DEFAULT_ALLOWED_METHODS:
                 logger.warning(
-                    f"Invalid HTTP method",
+                    "Invalid HTTP method",
                     extra={
                         "request": {
                             "method": request.method,
