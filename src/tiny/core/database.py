@@ -11,8 +11,12 @@ from typing import AsyncGenerator, Optional
 from sqlalchemy import event, text
 from sqlalchemy.engine.url import make_url
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.asyncio import (AsyncEngine, AsyncSession,
-                                    async_sessionmaker, create_async_engine)
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 from sqlalchemy.orm import DeclarativeBase
 
 from tiny.core.config import config

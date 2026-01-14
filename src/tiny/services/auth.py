@@ -33,9 +33,7 @@ class AuthService:
 
     @staticmethod
     def hash_password(password: str) -> str:
-        return bcrypt.hashpw(
-            password.encode(), bcrypt.gensalt()
-        ).decode()
+        return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
     @staticmethod
     def verify_password(hashed_password: str, password: str) -> bool:
@@ -92,6 +90,7 @@ class AuthService:
 
         tokens = await self.token_service.create_tokens_pair(user.id)
         logger.info("User logged in", extra={"user_id": user.id})
+        await self.user_repo.updatde_last_login(user.id)
 
         return {
             **tokens,
@@ -147,6 +146,41 @@ class AuthService:
         reset_token = self.token_service.create_password_reset_token(email)
 
         return {"reset_token": reset_token, "message": "Code verified"}
+
+    async def send_email_verify_code(self, user_id, email, x_request_id: str):
+        verify_code = "".join([str(random.randint(0, 9)) for _ in range(6)])
+
+        redis_key = f"{config.redis.cache_prefix}:email-verify-code:{email}"
+
+        await self.redis.setex(redis_key, 600, verify_code)
+
+        await self.broker.publish(
+            message={"user_id": user_id, "email": email, "code": verify_code},
+            queue="email.account_verification",
+            expiration=600,
+            correlation_id=x_request_id,
+        )
+        logger.info(
+            "Email verification code sent to broker",
+            extra={"email": email},
+        )
+
+        return {
+            "result": "success",
+            "msg": f"Email verification code sent to your email: {email}",
+        }
+
+    async def verify_email_verification_code(self, email: str, code) -> bool:
+        redis_key = f"{config.redis.cache_prefix}:email-verify-code:{email}"
+
+        stored_code = await self.redis.get(redis_key)
+
+        if not stored_code or stored_code.decode() != code:
+            return False
+
+        logger.info("User verified email code", extra={"email": email})
+
+        return True
 
 
 def get_auth_service(

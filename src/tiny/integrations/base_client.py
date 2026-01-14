@@ -3,8 +3,13 @@ from abc import ABC
 from typing import Dict, Optional
 
 import httpx
-from tenacity import (before_sleep_log, retry, retry_if_exception,
-                      stop_after_attempt, wait_exponential)
+from tenacity import (
+    before_sleep_log,
+    retry,
+    retry_if_exception,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +27,7 @@ def _is_retryable_httpx_exc(exc: BaseException) -> bool:
         return (500 <= code < 600) or (code == 429)
 
     return False
+
 
 # todo: нет сильного желания хранить какую либо логику взаимодействия с внешними сервисами на стороне бэка, скорее всего уйдет к воркерам
 class BaseClient(ABC):

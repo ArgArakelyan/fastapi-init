@@ -1,12 +1,16 @@
-from fastapi import (APIRouter, Depends, HTTPException,
-                     Request, Response, status, Header)
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
 from jose import jwt
-from tiny.core.config import  config
+
+from tiny.core.config import config
 from tiny.core.rate_limiting import auth_rate_limit, rate_limit
 from tiny.models.auth import AuthBase
 from tiny.repositories.user import UserRepository, get_user_repository
-from tiny.services.auth import (AuthService, get_auth_service,
-                                get_optional_current_user)
+from tiny.services.auth import (
+    AuthService,
+    CurrentUser,
+    get_auth_service,
+    get_optional_current_user,
+)
 
 router = APIRouter()
 
@@ -163,7 +167,6 @@ async def auth_reset_password_verify(
     return await auth_service.verify_reset_code(email, reset_code)
 
 
-
 @router.post("/password/reset-final")
 async def auth_finalize_reset_password(
     new_password: str,
@@ -171,19 +174,70 @@ async def auth_finalize_reset_password(
     user_repo: UserRepository = Depends(get_user_repository),
     token: str = Header(..., alias="Authorization", description="Reset token"),
 ):
-    payload = jwt.decode(token.replace("Bearer ", ""), config.auth.jwt_secret.get_secret_value())
+    payload = jwt.decode(
+        token.replace("Bearer ", ""), config.auth.jwt_secret.get_secret_value()
+    )
     email = payload["sub"]
 
     user = await user_repo.get_by_email(email)
 
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
 
     hashed_password = auth_service.hash_password(new_password)
 
-    result = await user_repo.update_password(identifier=email, new_password=hashed_password)
+    result = await user_repo.update_password(
+        identifier=email, new_password=hashed_password
+    )
 
     if result is None:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Something went wrong")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Something went wrong",
+        )
 
     return {"message": "Password reset successfully"}
+
+
+@router.post("/email-verification/request-code")
+@rate_limit("3/minute")
+async def request_email_verification_code(
+    request: Request,
+    current_user: CurrentUser,
+    auth_service: AuthService = Depends(get_auth_service),
+    user_repo: UserRepository = Depends(get_user_repository),
+):
+    user = await user_repo.get_by_id(current_user.id)
+
+    return await auth_service.send_email_verify_code(
+        email=user.email,
+        user_id=current_user.id,
+        x_request_id=request.headers.get("x-request-id"),
+    )
+
+
+@router.post("/api/auth/email-verification/verify")
+@rate_limit("3/minute")
+async def verify_email(
+    request: Request, # noqa
+    code: str,
+    current_user: CurrentUser,
+    auth_service: AuthService = Depends(get_auth_service),
+    user_repo: UserRepository = Depends(get_user_repository),
+):
+    user = await user_repo.get_by_id(current_user.id)
+    result = await auth_service.verify_email_verification_code(email=user.email, code=code)
+
+    if not result:
+        return {"result": "failed", "msg": "Email verification failed"}
+
+    update_ver_code_result =  await user_repo.verify_email(current_user.id)
+
+    if not update_ver_code_result:
+        return {"result": "failed", "msg": "Something went wrong"}
+
+    return {"result": "success", "msg": "Email verification successful"}
+
+

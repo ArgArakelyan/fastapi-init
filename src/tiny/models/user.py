@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel
 from sqlalchemy import Boolean, DateTime, Integer, String
@@ -14,16 +15,19 @@ class User(Base):
     email: Mapped[str] = mapped_column(String, index=True)
     password: Mapped[str] = mapped_column(String, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    is_verified: Mapped[bool] = mapped_column(Boolean, nullable=True, default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=datetime.now
     )
+    last_login_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     password_changed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
 
 class UserRead(BaseModel):
     id: int
     email: str
-    created_at: datetime
+    is_verified: Optional[bool]
+    # created_at: datetime
 
 
 class UserAuth(BaseModel):

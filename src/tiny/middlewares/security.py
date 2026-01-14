@@ -3,8 +3,7 @@ from typing import Optional
 
 from fastapi import Request, Response, status
 from fastapi.responses import JSONResponse
-from starlette.middleware.base import (BaseHTTPMiddleware,
-                                       RequestResponseEndpoint)
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 logger = logging.getLogger(__name__)
 

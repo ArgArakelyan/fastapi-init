@@ -34,7 +34,7 @@ class RequestIDFilter(logging.Filter):
 
 
 def sanitize_tokens(
-    logger: Any, method: str, event_dict: dict[str, Any] # noqa
+    logger: Any, method: str, event_dict: dict[str, Any]  # noqa
 ) -> dict[str, Any]:  # noqa
     """Удаляет токены из логов для предотвращения утечки credentials"""
     import re
@@ -53,7 +53,7 @@ def sanitize_tokens(
         (
             r"\{[^\}]*['\"]access_token['\"]:\s*['\"][^'\"]+['\"][^\}]*\}",
             "{access_token:[REDACTED]}",
-        )
+        ),
     ]
 
     for pattern, replacement in patterns:
@@ -64,7 +64,7 @@ def sanitize_tokens(
 
 
 def add_caller_info(
-    logger: Any, method: str, event_dict: dict[str, Any] # noqa
+    logger: Any, method: str, event_dict: dict[str, Any]  # noqa
 ) -> dict[str, Any]:
     try:
         record = event_dict.get("_record")

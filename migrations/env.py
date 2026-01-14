@@ -5,7 +5,7 @@ from sqlalchemy import engine_from_config, pool
 
 from tiny.core.config import config
 from tiny.core.database import Base
-from tiny.models.user import User # noqa
+from tiny.models.user import User  # noqa
 
 migration_config = context.config
 

@@ -118,7 +118,7 @@ class UserRepository:
         if not user:
             return None
 
-        user_read = UserRead(id=user.id, email=user.email, created_at=user.created_at)
+        user_read = UserRead(id=user.id, email=user.email, is_verified=user.is_verified)
 
         await self._set_user_cache(user_read)
 
@@ -141,8 +141,7 @@ class UserRepository:
     async def update_password(self, identifier: str, new_password: str) -> bool:
         try:
             logger.debug(
-                "Updating user password",
-                extra={"user": {"identifier": identifier}}
+                "Updating user password", extra={"user": {"identifier": identifier}}
             )
 
             if identifier.isdigit():
@@ -156,7 +155,7 @@ class UserRepository:
             if not user:
                 logger.warning(
                     "User not found for password update",
-                    extra={"user": {"identifier": identifier}}
+                    extra={"user": {"identifier": identifier}},
                 )
                 return False
 
@@ -171,7 +170,7 @@ class UserRepository:
 
             logger.info(
                 "User password updated successfully",
-                extra={"user": {"id": user.id, "email": user.email}}
+                extra={"user": {"id": user.id, "email": user.email}},
             )
             return True
 
@@ -180,9 +179,44 @@ class UserRepository:
             logger.error(
                 "Failed to update user password",
                 extra={"user": {"identifier": identifier}},
-                exc_info=e
+                exc_info=e,
             )
             return False
+
+    async def updatde_last_login(self, user_id: int) -> None:
+        try:
+            stmt = select(User).where(User.id == user_id)
+
+            result = await self.session.execute(stmt)
+
+            user: User | None = result.scalar_one_or_none()
+
+            user.last_login_at = datetime.now()
+            await self.session.commit()
+
+        except IntegrityError as e:
+            logger.warning(
+                "Failed to update user last login field",
+                extra={"user": {"id": user_id}},
+                exc_info=e,
+            )
+            await self.session.rollback()
+
+    async def verify_email(self, user_id: int) -> bool:
+        try:
+            stmt = select(User).where(User.id == user_id)
+
+            result = await self.session.execute(stmt)
+
+            user: User | None = result.scalar_one_or_none()
+
+            user.is_verified = True
+            await self.session.commit()
+            return True
+        except IntegrityError as e:
+            logger.error("Failed to verify user email", exc_info=e, extra={"user": {"id": user_id}})
+            return False
+
 
 
 def get_user_repository(

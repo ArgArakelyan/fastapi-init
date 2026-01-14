@@ -70,7 +70,6 @@ class TokenService:
         logger.debug("Password reset token created", extra={"email": email})
         return jwt.encode(payload, self.jwt_secret, algorithm=self.jwt_encode_algorithm)
 
-
     def decode_token(self, token: str) -> TokenData:
         try:
             payload = jwt.decode(

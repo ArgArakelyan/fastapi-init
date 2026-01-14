@@ -56,10 +56,8 @@ class RabbitConfig(BaseSettings):
     retry_delay: int = 5
 
     @property
-    def RABBITMQ_URI(self) -> str: # noqa
-        return (
-            f"amqp://{self.user}:{self.password.get_secret_value()}@{self.host}:{self.port}/{self.vhost}"
-        )
+    def RABBITMQ_URI(self) -> str:  # noqa
+        return f"amqp://{self.user}:{self.password.get_secret_value()}@{self.host}:{self.port}/{self.vhost}"
 
     model_config = {"env_prefix": "RABBITMQ_", "extra": "ignore"}
 
@@ -102,8 +100,8 @@ config = Config()
 
 
 fastapi_settings = {
-    "title": config.app.name, # в идеале передавать slug проекта из репы (через CI)
-    "version": config.app.version, # притягивается через CI
+    "title": config.app.name,  # в идеале передавать slug проекта из репы (через CI)
+    "version": config.app.version,  # притягивается через CI
     "docs_url": None if config.app.environment == "production" else "/docs",
     "redoc_url": None if config.app.environment == "production" else "/redoc",
     "openapi_url": None if config.app.environment == "production" else "/openapi.json",

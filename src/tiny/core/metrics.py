@@ -2,8 +2,7 @@ from prometheus_client import PLATFORM_COLLECTOR  # noqa
 from prometheus_client import Counter  # noqa
 from prometheus_client import Gauge  # noqa
 from prometheus_client import Histogram  # noqa
-from prometheus_client import (GC_COLLECTOR, PROCESS_COLLECTOR,
-                               CollectorRegistry)
+from prometheus_client import GC_COLLECTOR, PROCESS_COLLECTOR, CollectorRegistry
 from prometheus_fastapi_instrumentator import Instrumentator
 
 registry = CollectorRegistry()
