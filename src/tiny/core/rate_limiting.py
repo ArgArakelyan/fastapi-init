@@ -1,3 +1,9 @@
+"""
+Настройки лимитера запросов
+
+Данные храним в Redis
+"""
+
 import logging
 from functools import wraps
 from typing import Callable

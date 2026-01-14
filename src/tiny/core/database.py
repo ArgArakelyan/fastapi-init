@@ -109,7 +109,8 @@ class DbManager:
     @asynccontextmanager
     async def session(self) -> AsyncGenerator[AsyncSession, None]:
         """
-        Контекст для краткоживущих сессий (per-request/per-job).
+        Контекст для открытия сессий
+
         Делает rollback при исключениях и гарантирует закрытие.
         """
         async with self.sessionmaker() as session:
@@ -124,15 +125,16 @@ class DbManager:
     @asynccontextmanager
     async def transaction(self) -> AsyncGenerator[AsyncSession, None]:
         """
-        Удобный контекст для транзакции:
+        Контекст для транзакций
         begin/commit при успехе, rollback при ошибке.
         """
+        # todo: придумать нужно ли оно вообще
         async with self.sessionmaker() as session:
             try:
                 async with session.begin():
                     yield session
             except Exception:
-                # session.begin контекст сам делает rollback, но явный rollback не повредит
+                # todo: есть ли смысл вообще от роллбэка при транзакциях если оно само роллбэкается при ошибках
                 await session.rollback()
                 raise
             finally:
@@ -157,7 +159,7 @@ class DbManager:
 
     async def dispose(self) -> None:
         """
-        Корректно закрывает пул соединений (например, на shutdown приложения).
+        Корректно закрывает пул соединений (кладется в lifespan для корректного завершения App"
         """
         if self._engine is not None:
             await self._engine.dispose()
@@ -165,6 +167,7 @@ class DbManager:
             self._sessionmaker = None
 
 
+# глобальный экземпляр
 db = DbManager(
     dsn=config.database.SQLALCHEMY_DATABASE_URI, pool_size=config.database.pool_size
 )

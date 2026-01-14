@@ -16,6 +16,11 @@ request_id_var: ContextVar[str] = ContextVar("request_id", default="no-request")
 
 
 def add_request_id(_, __, event_dict):
+    """
+    Добавляется correlation id (в виде request_id к запросам)
+
+    Получаем request_id из хэдера запроса (или генерируем сами, если отсутствует) - X-Request-Id
+    """
     event_dict["request_id"] = request_id_var.get()
     return event_dict
 
@@ -29,7 +34,7 @@ class RequestIDFilter(logging.Filter):
 
 
 def sanitize_tokens(
-    logger: Any, method: str, event_dict: dict[str, Any]
+    logger: Any, method: str, event_dict: dict[str, Any] # noqa
 ) -> dict[str, Any]:  # noqa
     """Удаляет токены из логов для предотвращения утечки credentials"""
     import re
@@ -48,11 +53,7 @@ def sanitize_tokens(
         (
             r"\{[^\}]*['\"]access_token['\"]:\s*['\"][^'\"]+['\"][^\}]*\}",
             "{access_token:[REDACTED]}",
-        ),
-        (
-            r"https?://api\.telegram\.org/bot[^/]+/",
-            r"https://api.telegram.org/bot[REDACTED]/",
-        ),
+        )
     ]
 
     for pattern, replacement in patterns:
@@ -63,7 +64,7 @@ def sanitize_tokens(
 
 
 def add_caller_info(
-    logger: Any, method: str, event_dict: dict[str, Any]
+    logger: Any, method: str, event_dict: dict[str, Any] # noqa
 ) -> dict[str, Any]:
     try:
         record = event_dict.get("_record")

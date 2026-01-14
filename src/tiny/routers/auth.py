@@ -1,11 +1,11 @@
-from fastapi import (APIRouter, BackgroundTasks, Depends, HTTPException,
+from fastapi import (APIRouter, Depends, HTTPException,
                      Request, Response, status, Header)
 from jose import jwt
 from tiny.core.config import  config
 from tiny.core.rate_limiting import auth_rate_limit, rate_limit
 from tiny.models.auth import AuthBase
 from tiny.repositories.user import UserRepository, get_user_repository
-from tiny.services.auth import (AuthService, CurrentUser, get_auth_service,
+from tiny.services.auth import (AuthService, get_auth_service,
                                 get_optional_current_user)
 
 router = APIRouter()

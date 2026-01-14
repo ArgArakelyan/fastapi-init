@@ -1,10 +1,12 @@
+"""
+Настройка подключения к Redis
+"""
+
 import asyncio
 import logging
 from typing import Any, Optional
 
 import redis.asyncio as redis
-from fastapi_cache import FastAPICache
-from fastapi_cache.backends.redis import RedisBackend
 from redis.exceptions import RedisError
 
 from tiny.core.config import config
@@ -22,14 +24,13 @@ class RedisManager:
 
     async def connect(self):
         """
-        Инициализация соединения с Redis и FastAPI-кэша
+        Инициализация соединения с Redis
         """
         try:
             self.redis_client = redis.Redis(
                 host=self.host, port=self.port, db=self.db, decode_responses=False
             )
             await self.redis_client.ping()
-            FastAPICache.init(RedisBackend(self.redis_client), prefix=self.cache_prefix)
             logger.info("Redis connection established successfully")
         except RedisError:
             logger.error("Failed to connect Redis", exc_info=True)
@@ -37,7 +38,7 @@ class RedisManager:
 
     async def disconnect(self):
         """
-        Корректное завершение соединения с Redis
+        Завершение соединения с Redis (кладется в lifespan для корректного завершения App)
         """
         if self.redis_client:
             await self.redis_client.close()
@@ -50,6 +51,8 @@ class RedisManager:
         if self.redis_client is None:
             await self.connect()
         return self.redis_client
+
+    # базовые команды redis
 
     async def get(self, key: str):
         client = await self.get_client()

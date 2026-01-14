@@ -19,7 +19,6 @@ class TokenRepository:
     async def save_refresh_token(
         self, token: str, user_id: int, expires_delta: timedelta
     ):
-        # ✅ SHA256 хеш токена = безопасный ключ 64 символа
         token_hash = hashlib.sha256(token.encode()).hexdigest()
         key = f"{self.REFRESH_TOKEN_REDIS_KEY_PREFIX}:{user_id}:{token_hash}"
 

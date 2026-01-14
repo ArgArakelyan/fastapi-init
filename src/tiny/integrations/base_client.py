@@ -10,20 +10,20 @@ logger = logging.getLogger(__name__)
 
 
 def _is_retryable_httpx_exc(exc: BaseException) -> bool:
-    # Network/timeouts are always retryable
+    # Ретраи на случай сетевых проблем
     if isinstance(
         exc, (httpx.TimeoutException, httpx.ConnectError, httpx.NetworkError)
     ):
         return True
 
-    # Retry only selected HTTP status codes
+    # Статус коды, подходящие под ретраи
     if isinstance(exc, httpx.HTTPStatusError) and exc.response is not None:
         code = exc.response.status_code
         return (500 <= code < 600) or (code == 429)
 
     return False
 
-
+# todo: нет сильного желания хранить какую либо логику взаимодействия с внешними сервисами на стороне бэка, скорее всего уйдет к воркерам
 class BaseClient(ABC):
     def __init__(
         self, base_url: str, headers: Optional[Dict[str, str]] = None, timeout: int = 15
