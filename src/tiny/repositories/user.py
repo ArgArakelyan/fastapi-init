@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from typing import Optional
 
 from fastapi import Depends
@@ -161,6 +162,7 @@ class UserRepository:
 
             # Обновляем пароль
             user.password = new_password
+            user.password_changed_at = datetime.now()
             await self.session.commit()
 
             # Инвалидируем кэш

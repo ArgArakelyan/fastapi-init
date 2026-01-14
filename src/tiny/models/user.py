@@ -17,6 +17,7 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=datetime.now
     )
+    password_changed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
 
 class UserRead(BaseModel):
