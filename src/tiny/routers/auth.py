@@ -211,6 +211,9 @@ async def request_email_verification_code(
 ):
     user = await user_repo.get_by_id(current_user.id)
 
+    if user.is_verified:
+        return {"message": "Email already verified"}
+
     return await auth_service.send_email_verify_code(
         email=user.email,
         user_id=current_user.id,
